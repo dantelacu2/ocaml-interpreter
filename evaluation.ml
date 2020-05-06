@@ -68,19 +68,47 @@ module Env : ENV =
     let empty () : env = [] ;;
 
     let close (exp : expr) (env : env) : value =
-      failwith "close not implemented" ;;
+      Closure (exp, env) ;;
 
-    let lookup (env : env) (varname : varid) : value =
-      failwith "lookup not implemented" ;;
+    let rec lookup (env : env) (varname : varid) : value =
+      match env with
+      | [] -> raise (EvalError "no value")
+      | (varid_name, value) :: tl ->
+        if (varid_name == varname) 
+        then !value 
+        else lookup tl varname ;;
 
     let extend (env : env) (varname : varid) (loc : value ref) : env =
-      failwith "extend not implemented" ;;
+      List.map (fun (varid_name, value) -> 
+               if (varid_name == varname)
+               then (varid_name, loc)
+               else (varid_name, value)) 
+               env ;;
 
     let value_to_string ?(printenvp : bool = true) (v : value) : string =
-      failwith "value_to_string not implemented" ;;
 
-    let env_to_string (env : env) : string =
-      failwith "env_to_string not implemented" ;;
+     ;;
+
+    let rec env_to_string (env : env) : string =
+      match env with
+      | [] -> "" 
+      | (varname, value) :: tl -> 
+        "(" ^ varname ^ ", " ^
+        (match !value with
+        | Val x -> 
+
+          (match x with
+          | Num a -> string_of_int a
+          | _ -> raise (EvalError "invalid env"))
+
+        | Closure (j, k) ->
+
+          (match j with
+          | Num q -> "[" ^ string_of_int q ^ ", "
+          | _ -> raise (EvalError "invalid env")) ^ (env_to_string k) ^ "]"
+
+        ) ^ "), " ^ (env_to_string tl);;
+
   end
 ;;
 
@@ -114,15 +142,57 @@ let eval_t (exp : expr) (_env : Env.env) : Env.value =
   Env.Val exp ;;
 
 (* The SUBSTITUTION MODEL evaluator -- to be completed *)
+
+
+
+let extract_exp (value : Env.value) : expr =
+  match value with
+  | Val x -> x
+  | Closure (x, y) -> x ;;
    
-let eval_s (_exp : expr) (_env : Env.env) : Env.value =
-  failwith "eval_s not implemented" ;;
+let rec eval_s (_exp : expr) (_env : Env.env) : Env.value =
+  match _exp with
+  | Var x ->  raise (EvalError "Unbound var") 
+  | Num x -> Val (Num x) 
+  | Bool x -> Val (Bool x)
+
+  | Unop (x, y) -> 
+    (match extract_exp (eval_s y _env) with
+    | Num z -> Val (Num(~-z))
+    | _ -> raise (EvalError "can't negate a non number"))
+
+  | Binop (x, y, z) -> 
+    (match x, (extract_exp (eval_s y _env)), (extract_exp (eval_s y _env)) with
+    | Plus, Num a, Num b -> Val (Num(a + b))
+    | Minus, Num a, Num b -> Val (Num(a - b))
+    | Times, Num a, Num b -> Val (Num(a * b))
+    | Equals, Num a, Num b -> Val (Bool(a == b)) (*What do i do in the equals case*)
+    | LessThan, Num a, Num b -> Val (Bool(a < b)) 
+    | _, _, _ -> raise (EvalError "can't apply the binary operator to non numbers"))
+
+  | Conditional (x, y, z) -> 
+    (match (extract_exp (eval_s x _env)) with
+    | Bool x -> if x then eval_s y _env else eval_s z _env
+    | _ -> raise (EvalError "condition is not a boolean"))
+
+  | Fun (x, y) -> 
+    if (SS.mem x (free_vars y))
+    then Val (Fun (x, y))
+    else if !(SS.mem x (free_vars y))
+    then Val (Fun (x, (extract_exp (eval_s y _env))))
+    else if (SS.mem x (free_vars y)) && (* How do I finish this?*)
+
+  | 
+
+    
+ ;;
      
 (* The DYNAMICALLY-SCOPED ENVIRONMENT MODEL evaluator -- to be
    completed *)
    
 let eval_d (_exp : expr) (_env : Env.env) : Env.value =
-  failwith "eval_d not implemented" ;;
+  match _exp with
+  | ;;
        
 (* The LEXICALLY-SCOPED ENVIRONMENT MODEL evaluator -- optionally
    completed as (part of) your extension *)

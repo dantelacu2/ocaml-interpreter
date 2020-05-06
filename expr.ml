@@ -63,18 +63,29 @@ let vars_of_list : string list -> varidset =
 (* free_vars : expr -> varidset
    Return a set of the variable names that are free in expression
    exp *)
-let free_vars (exp : expr) : varidset =
-  (* match exp with 
-  | Var x -> vars_of_list [x]
-  | _ ->  ;; *)
-  failwith "free_vars";;
+let rec exp_to_varid_strings (exp: expr) : string list =
+  match exp with 
+  | Var x -> [x]
+  | Unop (_, y) -> exp_to_varid_strings y
+  | Binop (_, y, z) -> List.append (exp_to_varid_strings y) (exp_to_varid_strings z)
+  | Conditional (x, y, z) -> List.append (List.append (exp_to_varid_strings x) (exp_to_varid_strings y)) (exp_to_varid_strings z)
+  | Fun (_, y) -> (exp_to_varid_strings y)
+  | Let (_, y, z) -> List.append (exp_to_varid_strings y) (exp_to_varid_strings z)
+  | Letrec (_, y, z) -> List.append (exp_to_varid_strings y) (exp_to_varid_strings z)
+  | App (x, y) -> List.append (exp_to_varid_strings x) (exp_to_varid_strings y)
+  | _ -> [] ;;
+
+let rec free_vars (exp : expr) : varidset =
+  vars_of_list (exp_to_varid_strings exp) ;;
 
 (* new_varname : unit -> varid
    Return a fresh variable, constructed with a running counter a la
    gensym. Assumes no variable names use the prefix "var". (Otherwise,
    they might accidentally be the same as a generated variable name.) *)
+let counter = ref 0 ;;
 let new_varname () : varid =
-  failwith "new_varname not implemented" ;;
+  counter := !counter + 1;
+  "var" ^ (string_of_int !counter) ;;
 
 (*......................................................................
   Substitution 
@@ -85,9 +96,34 @@ let new_varname () : varid =
  *)
 
 (* subst : varid -> expr -> expr -> expr
-   Substitute repl for free occurrences of var_name in exp *)
-let subst (var_name : varid) (repl : expr) (exp : expr) : expr =
-  failwith "subst not implemented" ;;
+   Substitute repl for free occurrences of var_name in exp 
+   check for fun, let, letrec if the bound variable is already 
+   a freevariable change the name of the bound variable
+   *)
+let rec subst (var_name : varid) (repl : expr) (exp : expr) : expr =
+  match exp with
+  | Var x -> if (x == var_name) then repl else Var x
+  | Unop (x, y) -> Unop (x, (subst var_name repl y))
+  | Binop (x, y, z) -> Binop (x, (subst var_name repl y), (subst var_name repl z))
+  | Conditional (x, y, z) -> Conditional ((subst var_name repl x), (subst var_name repl y), (subst var_name repl z))
+
+  | Fun (x, y) -> 
+    if (SS.mem x (free_vars y)) 
+    then Fun (new_varname(), (subst var_name repl y))
+    else Fun (x, (subst var_name repl y))
+
+                  (*Do I check if the bound variable isn't in exp1 and exp2?*)
+  | Let (x, y, z) | Letrec (x, y, z) -> 
+    if (SS.mem x (free_vars y) || SS.mem x (free_vars z))
+    then Let (new_varname(), (subst var_name repl y), (subst var_name repl z))
+    else Let (x, (subst var_name repl y), (subst var_name repl z))
+
+  | App (x, y) -> App (x, (subst var_name repl y))
+  
+    (*Can i do this?*)
+  | x -> x
+
+  ;;
 
 (*......................................................................
   String representations of expressions
