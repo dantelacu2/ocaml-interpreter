@@ -15,8 +15,12 @@ type binop =
   | Plus
   | Minus
   | Times
+  | Plusfloat
+  | Minusfloat
+  | Timesfloat
   | Equals
   | LessThan
+
 ;;
 
 type varid = string ;;
@@ -24,6 +28,7 @@ type varid = string ;;
 type expr =
   | Var of varid                         (* variables *)
   | Num of int                           (* integers *)
+  | Float of float                       (* floats *)
   | Bool of bool                         (* booleans *)
   | Unop of unop * expr                  (* unary operators *)
   | Binop of binop * expr * expr         (* binary operators *)
@@ -152,6 +157,9 @@ let binop_to_concrete_string (bin: binop) : string =
   | Times -> "*"
   | Equals -> "="
   | LessThan -> "<"
+  | Plusfloat -> ".+"
+  | Minusfloat -> ".-"
+  | Timesfloat -> ".*"
   ;;
 (* exp_to_concrete_string : expr -> string
    Returns a concrete syntax string representation of the expr *)
@@ -159,6 +167,7 @@ let rec exp_to_concrete_string (exp : expr) : string =
   match exp with
   | Var x -> x
   | Num x -> string_of_int x
+  | Float x -> string_of_float x
   | Bool x -> string_of_bool x
   | Unop (_, y) -> "-" ^ (exp_to_concrete_string y)
   | Binop (x, y, z) -> (exp_to_concrete_string y) ^ 
@@ -185,12 +194,16 @@ let binop_to_abstract_string (bin: binop) : string =
   | Times -> "Times"
   | Equals -> "Equls"
   | LessThan -> "LessThan"
+  | Plusfloat -> "Plus floats"
+  | Minusfloat -> "Minus floats"
+  | Timesfloat -> "Times floats"
   ;;
 
 let rec exp_to_abstract_string (exp : expr) : string =
   match exp with
   | Var x -> "Var(" ^ x ^ ")"
   | Num x -> "Num(" ^ (string_of_int x) ^ ")"
+  | Float x -> "Float(" ^ (string_of_float x) ^ ")"
   | Bool x -> "Bool(" ^ (string_of_bool x) ^ ")"
   | Unop (_, y) -> "Unop(" ^ "Negate, " ^ (exp_to_abstract_string y) ^ ")"
   | Binop (x, y, z) -> "Binop(" ^ (binop_to_abstract_string x) ^ ", "

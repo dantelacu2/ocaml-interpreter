@@ -15,6 +15,9 @@ type binop =
   | Plus
   | Minus
   | Times
+  | Plusfloat
+  | Minusfloat
+  | Timesfloat
   | Equals
   | LessThan
 ;;
@@ -26,6 +29,7 @@ type varid = string ;;
 type expr =
   | Var of varid                         (* variables *)
   | Num of int                           (* integers *)
+  | Float of float
   | Bool of bool                         (* booleans *)
   | Unop of unop * expr                  (* unary operators *)
   | Binop of binop * expr * expr         (* binary operators *)

@@ -41,11 +41,16 @@
                        ("-", MINUS);
                        ("*", TIMES);
                        ("(", OPEN);
-                       (")", CLOSE)
+                       (")", CLOSE);
+                       ("+.", PLUSFLOAT);
+                       ("-.", MINUSFLOAT);
+                       ("*.", TIMESFLOAT);
                      ]
 }
 
 let digit = ['0'-'9']
+let floatdigit = "." digit*
+let float = digit* floatdigit?
 let id = ['a'-'z'] ['a'-'z' '0'-'9']*
 let sym = ['(' ')'] | (['+' '-' '*' '.' '=' '~' ';' '<' '>']+)
 
@@ -53,6 +58,10 @@ rule token = parse
   | digit+ as inum
         { let num = int_of_string inum in
           INT num
+        }
+  | floatdigit as inumfloat
+        { let num = float_of_string inumfloat in
+          FLOAT num
         }
   | id as word
         { try

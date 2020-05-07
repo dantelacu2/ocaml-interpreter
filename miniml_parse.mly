@@ -11,14 +11,15 @@
 %token OPEN CLOSE
 %token LET DOT IN REC
 %token NEG
-%token PLUS MINUS 
-%token TIMES
+%token PLUS MINUS PLUSFLOAT MINUSFLOAT
+%token TIMES TIMESFLOAT
 %token LESSTHAN EQUALS
 %token IF THEN ELSE 
 %token FUNCTION
 %token RAISE
 %token <string> ID
 %token <int> INT 
+%token <float> FLOAT
 %token TRUE FALSE
 
 %nonassoc LESSTHAN
@@ -38,11 +39,15 @@ exp:    exp expnoapp            { App($1, $2) }
         | expnoapp              { $1 }
 
 expnoapp: INT                   { Num $1 }
+        | FLOAT                 { Float $1 }
         | TRUE                  { Bool true }
         | FALSE                 { Bool false }
         | ID                    { Var $1 }
         | exp PLUS exp          { Binop(Plus, $1, $3) }
         | exp MINUS exp         { Binop(Minus, $1, $3) }
+        | exp MINUSFLOAT exp    { Binop(Minusfloat, $1, $3) }
+        | exp PLUSFLOAT exp     { Binop(Plusfloat, $1, $3) }
+        | exp TIMESFLOAT exp    { Binop(Timesfloat, $1, $3) }
         | exp TIMES exp         { Binop(Times, $1, $3) }
         | exp EQUALS exp        { Binop(Equals, $1, $3) }
         | exp LESSTHAN exp      { Binop(LessThan, $1, $3) }

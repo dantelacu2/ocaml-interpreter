@@ -88,12 +88,14 @@ module Env : ENV =
 
         (match x with
         | Num a -> string_of_int a
+        | Float a -> string_of_float a
         | _ -> raise (EvalError "invalid env"))
 
       | Closure (j, k) ->
 
         (match j with
         | Num q -> "[" ^ string_of_int q ^ ", "
+        | Float q -> "[" ^ string_of_float q ^ ", "
         | _ -> raise (EvalError "invalid env")) ^ (env_to_string k) ^ "]" 
 
     and env_to_string (env : env) : string =
@@ -148,12 +150,14 @@ let extract_exp (value : Env.value) : expr =
 let rec eval_s (_exp : expr) (_env : Env.env) : Env.value =
   match _exp with
   | Var x ->  raise (EvalError "Unbound var") 
-  | Num x -> Val (Num x) 
+  | Num x -> Val (Num x)
+  | Float x -> Val (Float x) 
   | Bool x -> Val (Bool x)
 
   | Unop (x, y) -> 
     (match extract_exp (eval_s y _env) with
     | Num z -> Val (Num(~-z))
+    | Float z -> Val (Float(~-.z))
     | _ -> raise (EvalError "can't negate a non number"))
 
   | Binop (x, y, z) -> 
@@ -163,6 +167,9 @@ let rec eval_s (_exp : expr) (_env : Env.env) : Env.value =
     | Times, Num a, Num b -> Val (Num(a * b))
     | Equals, Num a, Num b -> Val (Bool(a == b)) (*add equals two booleans*)
     | LessThan, Num a, Num b -> Val (Bool(a < b)) 
+    | Plusfloat, Float a, Float b -> Val (Float(a +. b))
+    | Minusfloat, Float a, Float b -> Val (Float(a -. b))
+    | Timesfloat, Float a, Float b -> Val (Float(a *. b))
     | _, _, _ -> raise (EvalError "can't apply the binary operator to non numbers"))
 
   | Conditional (x, y, z) -> 
@@ -198,12 +205,14 @@ let rec eval_s (_exp : expr) (_env : Env.env) : Env.value =
 let rec eval_d (_exp : expr) (_env : Env.env) : Env.value =
   match _exp with
   | Var x ->  Env.lookup _env x 
-  | Num x -> Val (Num x) 
+  | Num x -> Val (Num x)
+  | Float x -> Val (Float x) 
   | Bool x -> Val (Bool x)
 
   | Unop (x, y) -> 
     (match extract_exp (eval_d y _env) with
     | Num z -> Val (Num(~-z))
+    | Float z -> Val (Float(~-.z))
     | _ -> raise (EvalError "can't negate a non number"))
 
   | Binop (x, y, z) -> 
@@ -213,6 +222,9 @@ let rec eval_d (_exp : expr) (_env : Env.env) : Env.value =
     | Times, Num a, Num b -> Val (Num(a * b))
     | Equals, Num a, Num b -> Val (Bool(a == b)) (*add equals two booleans*)
     | LessThan, Num a, Num b -> Val (Bool(a < b)) 
+    | Plusfloat, Float a, Float b -> Val (Float(a +. b))
+    | Minusfloat, Float a, Float b -> Val (Float(a -. b))
+    | Timesfloat, Float a, Float b -> Val (Float(a *. b))
     | _, _, _ -> raise (EvalError "can't apply the binary operator to non numbers"))
 
   | Conditional (x, y, z) -> 
@@ -262,4 +274,4 @@ let eval_e _ =
    above, not the evaluate function, so it doesn't matter how it's set
    when you submit your solution.) *)
    
-let evaluate = eval_t ;;
+let evaluate = eval_d ;;
