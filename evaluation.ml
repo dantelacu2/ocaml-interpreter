@@ -123,12 +123,7 @@ module Env : ENV =
   Each evaluator is of type `expr -> Env.env -> Env.value` for
   consistency, though some of the evaluators don't need an
   environment, and some will only return values that are "bare
-  values" (that is, not closures). 
-
-  DO NOT CHANGE THE TYPE SIGNATURES OF THESE FUNCTIONS. Compilation
-  against our unit tests relies on their having these signatures. If
-  you want to implement an extension whose evaluator has a different
-  signature, implement it as `eval_e` below.  *)
+  values" (that is, not closures).   *)
 
 (* The TRIVIAL EVALUATOR, which leaves the expression to be evaluated
    essentially unchanged, just converted to a value for consistency
@@ -252,26 +247,5 @@ let rec eval_d (_exp : expr) (_env : Env.env) : Env.value =
 
   | Raise -> raise (EvalException) ;;
        
-(* The LEXICALLY-SCOPED ENVIRONMENT MODEL evaluator -- optionally
-   completed as (part of) your extension *)
-   
-let eval_l (_exp : expr) (_env : Env.env) : Env.value =
-  failwith "eval_l not implemented" ;;
-
-(* The EXTENDED evaluator -- if you want, you can provide your
-   extension as a separate evaluator, or if it is type- and
-   correctness-compatible with one of the above, you can incorporate
-   your extensions within `eval_s`, `eval_d`, or `eval_l`. *)
-
-let eval_e _ =
-  failwith "eval_e not implemented" ;;
-  
-(* Connecting the evaluators to the external world. The REPL in
-   `miniml.ml` uses a call to the single function `evaluate` defined
-   here. Initially, evaluate is the trivial evaluator `eval_t`. But
-   you can define it to use any of the other evaluators as you proceed
-   to implement them. (We will directly unit test the four evaluators
-   above, not the evaluate function, so it doesn't matter how it's set
-   when you submit your solution.) *)
    
 let evaluate = eval_d ;;
