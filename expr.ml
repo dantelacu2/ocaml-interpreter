@@ -102,24 +102,40 @@ let new_varname () : varid =
    *)
 let rec subst (var_name : varid) (repl : expr) (exp : expr) : expr =
   match exp with
-  | Var x -> if (x == var_name) then repl else Var x
+  | Var x -> if (x = var_name) then repl else Var x
   | Unop (x, y) -> Unop (x, (subst var_name repl y))
   | Binop (x, y, z) -> Binop (x, (subst var_name repl y), (subst var_name repl z))
   | Conditional (x, y, z) -> Conditional ((subst var_name repl x), (subst var_name repl y), (subst var_name repl z))
 
   | Fun (x, y) -> 
-    if (SS.mem x (free_vars y)) 
-    then Fun (new_varname(), (subst var_name repl y))
-    else Fun (x, (subst var_name repl y))
+    if (var_name = x) 
+    then exp
+    else if not (SS.mem x (free_vars repl))
+    then Fun (x, (subst var_name repl y))
+    else let new_name = new_varname() in
+    Fun (new_name, subst var_name repl (subst x (Var(new_name)) y))
 
                   (*Do I check if the bound variable isn't in exp1 and exp2?*)
-  | Let (x, y, z) | Letrec (x, y, z) -> 
-    if (SS.mem x (free_vars y) || SS.mem x (free_vars z))
-    then Let (new_varname(), (subst var_name repl y), (subst var_name repl z))
-    else Let (x, (subst var_name repl y), (subst var_name repl z))
+  | Let (x, y, z) ->
+    if (var_name = x)
+    then Let (x, (subst var_name repl y), z)
+    else if not (SS.mem x (free_vars repl))
+    then Let (x, (subst var_name repl y), (subst var_name repl z))
+    else 
+    let new_name = new_varname() in
+    Let (new_name, subst var_name repl y, subst var_name repl (subst x (Var(new_name)) z))
 
-  | App (x, y) -> App (x, (subst var_name repl y))
-  
+  | Letrec (x, y, z) -> 
+    if (var_name = x)
+    then Letrec (x, (subst var_name repl y), z)
+    else if not (SS.mem x (free_vars repl))
+    then Letrec (x, (subst var_name repl y), (subst var_name repl z))
+    else 
+    let new_name = new_varname() in
+    Letrec (new_name, subst var_name repl y, subst var_name repl (subst x (Var(new_name)) z))
+
+  | App (x, y) -> App ((subst var_name repl x), (subst var_name repl y))
+
     (*Can i do this?*)
   | x -> x
 

@@ -74,40 +74,35 @@ module Env : ENV =
       match env with
       | [] -> raise (EvalError "no value")
       | (varid_name, value) :: tl ->
-        if (varid_name == varname) 
+        if (varid_name = varname) 
         then !value 
         else lookup tl varname ;;
 
     let extend (env : env) (varname : varid) (loc : value ref) : env =
-      List.map (fun (varid_name, value) -> 
-               if (varid_name == varname)
-               then (varid_name, loc)
-               else (varid_name, value)) 
-               env ;;
+      let removed_mapping = List.remove_assoc varname env in
+      (varname, loc) :: removed_mapping ;;
 
-    let value_to_string ?(printenvp : bool = true) (v : value) : string =
+    let rec value_to_string ?(printenvp : bool = true) (v : value) : string =
+      match v with
+      | Val x -> 
 
-     ;;
+        (match x with
+        | Num a -> string_of_int a
+        | _ -> raise (EvalError "invalid env"))
 
-    let rec env_to_string (env : env) : string =
+      | Closure (j, k) ->
+
+        (match j with
+        | Num q -> "[" ^ string_of_int q ^ ", "
+        | _ -> raise (EvalError "invalid env")) ^ (env_to_string k) ^ "]" 
+
+    and env_to_string (env : env) : string =
       match env with
       | [] -> "" 
       | (varname, value) :: tl -> 
         "(" ^ varname ^ ", " ^
-        (match !value with
-        | Val x -> 
-
-          (match x with
-          | Num a -> string_of_int a
-          | _ -> raise (EvalError "invalid env"))
-
-        | Closure (j, k) ->
-
-          (match j with
-          | Num q -> "[" ^ string_of_int q ^ ", "
-          | _ -> raise (EvalError "invalid env")) ^ (env_to_string k) ^ "]"
-
-        ) ^ "), " ^ (env_to_string tl);;
+        (value_to_string !value)
+         ^ "), " ^ (env_to_string tl) ;;
 
   end
 ;;
@@ -162,11 +157,11 @@ let rec eval_s (_exp : expr) (_env : Env.env) : Env.value =
     | _ -> raise (EvalError "can't negate a non number"))
 
   | Binop (x, y, z) -> 
-    (match x, (extract_exp (eval_s y _env)), (extract_exp (eval_s y _env)) with
+    (match x, (extract_exp (eval_s y _env)), (extract_exp (eval_s z _env)) with
     | Plus, Num a, Num b -> Val (Num(a + b))
     | Minus, Num a, Num b -> Val (Num(a - b))
     | Times, Num a, Num b -> Val (Num(a * b))
-    | Equals, Num a, Num b -> Val (Bool(a == b)) (*What do i do in the equals case*)
+    | Equals, Num a, Num b -> Val (Bool(a == b)) (*add equals two booleans*)
     | LessThan, Num a, Num b -> Val (Bool(a < b)) 
     | _, _, _ -> raise (EvalError "can't apply the binary operator to non numbers"))
 
@@ -175,24 +170,75 @@ let rec eval_s (_exp : expr) (_env : Env.env) : Env.value =
     | Bool x -> if x then eval_s y _env else eval_s z _env
     | _ -> raise (EvalError "condition is not a boolean"))
 
-  | Fun (x, y) -> 
-    if (SS.mem x (free_vars y))
-    then Val (Fun (x, y))
-    else if !(SS.mem x (free_vars y))
-    then Val (Fun (x, (extract_exp (eval_s y _env))))
-    else if (SS.mem x (free_vars y)) && (* How do I finish this?*)
+  | Fun (x, y) -> Val (Fun (x, y))
 
-  | 
+  | Let (x, y, z) -> 
+    eval_s (subst x (extract_exp (eval_s y _env)) z) _env
 
-    
+  | Letrec (x, y, z) ->
+    let v_d = extract_exp (eval_s y _env) in
+      let recur = Letrec (x, v_d, Var(x)) in
+      eval_s (subst x (subst x recur v_d) z) _env
+  
+  | App (x, y) ->
+    (let evaled_y = extract_exp (eval_s y _env) in
+    match extract_exp (eval_s x _env) with
+    | Fun (a, b) -> (eval_s (subst a evaled_y b) _env)
+    | _ -> raise (EvalError "have to apply a function"))
+  
+  | Unassigned -> raise (EvalError "can't evaluate unassigned")
+
+  | Raise -> raise (EvalException)
+      
  ;;
      
 (* The DYNAMICALLY-SCOPED ENVIRONMENT MODEL evaluator -- to be
    completed *)
    
-let eval_d (_exp : expr) (_env : Env.env) : Env.value =
+let rec eval_d (_exp : expr) (_env : Env.env) : Env.value =
   match _exp with
-  | ;;
+  | Var x ->  Env.lookup _env x 
+  | Num x -> Val (Num x) 
+  | Bool x -> Val (Bool x)
+
+  | Unop (x, y) -> 
+    (match extract_exp (eval_d y _env) with
+    | Num z -> Val (Num(~-z))
+    | _ -> raise (EvalError "can't negate a non number"))
+
+  | Binop (x, y, z) -> 
+    (match x, (extract_exp (eval_d y _env)), (extract_exp (eval_d z _env)) with
+    | Plus, Num a, Num b -> Val (Num(a + b))
+    | Minus, Num a, Num b -> Val (Num(a - b))
+    | Times, Num a, Num b -> Val (Num(a * b))
+    | Equals, Num a, Num b -> Val (Bool(a == b)) (*add equals two booleans*)
+    | LessThan, Num a, Num b -> Val (Bool(a < b)) 
+    | _, _, _ -> raise (EvalError "can't apply the binary operator to non numbers"))
+
+  | Conditional (x, y, z) -> 
+    (match (extract_exp (eval_d x _env)) with
+    | Bool x -> if x then eval_d y _env else eval_d z _env
+    | _ -> raise (EvalError "condition is not a boolean"))
+
+  | Fun (x, y) -> Val (Fun (x, y))
+
+  | Let (x, y, z) ->
+    let evaled_y = (eval_d y _env) in
+    eval_d z (Env.extend _env x (ref evaled_y))
+
+  | App (x, y) ->
+    (let evaled_y = (eval_d y _env) in
+    match extract_exp (eval_d x _env) with
+    | Fun (a, b) -> (eval_d b (Env.extend _env a (ref evaled_y)))
+    | _ -> raise (EvalError "have to apply a function"))
+
+  | Letrec (x, y, z) ->
+    let evaled_y = (eval_d y (Env.extend _env x (ref (Env.Val (Unassigned))))) in
+    eval_d z (Env.extend _env x (ref evaled_y))
+
+  | Unassigned -> raise (EvalError "can't evaluate unassigned")
+
+  | Raise -> raise (EvalException) ;;
        
 (* The LEXICALLY-SCOPED ENVIRONMENT MODEL evaluator -- optionally
    completed as (part of) your extension *)
