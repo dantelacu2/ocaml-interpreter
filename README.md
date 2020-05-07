@@ -8,6 +8,5 @@ Uses OCaml to build a new language called MiniML, it allows us to vary the seman
 **evaluation.ml** Implements the evaluation of the interpreter based on the two operational semantics
 **expr.ml** Provides the abstract syntax for language as well as defining how substitution works.
 **miniml.ml** provides the read, eval, print loop for the interpreter
-our publication, click on the **Publish now** button in the navigation bar.
 
 > To run, clone the repository, download the latest version of ocaml to compile the files, run ocamlbuild miniml.byte, then ./miniml.byte, and then you'll be in the real, eval, print loop for the interpreter.
